@@ -1,2 +1,244 @@
-# ZJX-MX
-Learning Management System with Canvas Intergration
+# ZJX LMS
+
+<p align="center">
+  <img src="assets/app_icon.png" alt="ZJX LMS app icon" width="128">
+</p>
+
+<p align="center">
+  <strong>A local-first PySide6 desktop companion for Canvas courses, assignments, resources, notes, and study widgets.</strong>
+</p>
+
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white">
+  <img alt="PySide6" src="https://img.shields.io/badge/UI-PySide6-41CD52">
+  <img alt="Canvas" src="https://img.shields.io/badge/Canvas-sync-E72429">
+  <img alt="Local first" src="https://img.shields.io/badge/storage-local--first-2563EB">
+  <img alt="Status" src="https://img.shields.io/badge/status-1.0.0--beta1-F59E0B">
+</p>
+
+---
+
+## Overview
+
+**ZJX LMS** is a desktop learning manager built for students and private beta testers who want Canvas data, course resources, assignment notes, and reminder widgets in one local workspace.
+
+The app stores user profiles, courses, assignments, announcements, resources, desktop widgets, cached Canvas profile pictures, and pasted note-widget images in a local vault. Canvas access tokens remain on the user's machine inside the local user profile JSON.
+
+---
+
+## Preview
+
+> Screenshots are not currently checked into this repository. The image links below are ready for future GitHub screenshots and should be added under `docs/images/`.
+
+![Dashboard screenshot placeholder](docs/images/dashboard.png)
+
+![Course view screenshot placeholder](docs/images/course-view.png)
+
+![Resource Library screenshot placeholder](docs/images/resource-library.png)
+
+![Widgets Manager screenshot placeholder](docs/images/widgets-manager.png)
+
+![Settings screenshot placeholder](docs/images/settings.png)
+
+---
+
+## Features
+
+### Canvas Learning Workflow
+
+- Sync Canvas courses, assignments, announcements, and user profile pictures.
+- Pin favourite Canvas courses and skip courses that should stay out of the active workspace.
+- Keep Canvas-imported records stable across re-syncs instead of duplicating existing courses or assignments.
+- Open Canvas-linked assignment and course resources from inside the app.
+
+### Local Vault And Resources
+
+- Store users, courses, assignments, files, notes, folders, links, widgets, and cached images in a local vault.
+- Organize resources by user, course, assignment, and general course context.
+- Import, copy, move, rename, delete, edit, preview, archive, and restore resources.
+- Browse resources through the main file explorer and the global Resource Library.
+- Export a human-readable zip archive of selected users, courses, assignments, files, notes, folders, and links.
+
+### Dashboards And Assignment Tracking
+
+- View upcoming assignments and course-focused study information.
+- Mark assignments as finished and keep archived work accessible.
+- Use due-date urgency colours and dashboard sorting to keep deadlines visible.
+- Work with both Canvas-imported and manually created courses or assignments.
+
+### Desktop Widgets
+
+- Create assignment countdown widgets.
+- Create shortcut panels for quick access.
+- Create pinned note widgets with pasted image support.
+- Keep widget data and pasted images stored locally in the vault.
+
+### Personalization And Desktop Integration
+
+- Switch between dark, light, and system-following theme modes.
+- Adjust accent colour, UI zoom, font style, scroll speed, and assignment reminder behaviour.
+- Use platform-aware startup registration on Windows, Linux desktop sessions, and macOS.
+- Minimize to tray when the current desktop session exposes tray/status notifier support.
+
+---
+
+## Screenshots To Add
+
+Add these images under `docs/images/` when screenshots are available:
+
+| File | What To Capture |
+| --- | --- |
+| `dashboard.png` | The global dashboard with upcoming assignments, deadline states, and a visible course summary. |
+| `course-view.png` | The sidebar, a selected course dashboard, assignment list, and course resource panel. |
+| `resource-library.png` | The Resource Library with a file or note preview, resource browsing, and archived assignment access. |
+| `widgets-manager.png` | The Widgets Manager showing an assignment countdown, shortcut panel, and note widget setup. |
+| `settings.png` | Theme/accent controls, backup/export tools, notification options, and tray/startup settings. |
+
+For best GitHub presentation, use clean sample data, hide real Canvas tokens or personal information, and capture images at a wide desktop size such as `1440x900` or `1600x1000`.
+
+---
+
+## Requirements
+
+- Python 3.10 or newer.
+- A desktop environment that can run Qt/PySide6 applications.
+- Optional Canvas account access for sync features.
+
+Runtime dependencies are listed in `requirements.txt`:
+
+- `PySide6`
+- `requests`
+- `python-docx`
+- `python-pptx`
+- `openpyxl`
+
+---
+
+## Run From Source
+
+From this `Main` directory:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
+```
+
+On macOS or Linux, use the equivalent shell activation command for your environment, then run `python main.py`.
+
+---
+
+## Canvas Setup
+
+Canvas sync requires:
+
+- Your Canvas base URL, such as `https://canvas.example.edu`.
+- A Canvas access token for the account you want to sync.
+
+The app stores the Canvas base URL and access token locally in the user's profile JSON. Tokens are not sent to a third-party backend by ZJX LMS. Treat the local vault as private user data and avoid committing vault contents to source control.
+
+---
+
+## Local Data
+
+By default, ZJX LMS creates its vault at:
+
+```text
+~/ZJX-LMS
+```
+
+The vault can contain:
+
+- User profiles and Canvas access tokens.
+- Canvas course, assignment, announcement, and profile picture metadata.
+- Imported files, notes, folders, links, and resource metadata.
+- Desktop widget definitions.
+- Cached Canvas profile pictures.
+- Pasted note-widget images.
+
+Use **Settings > Backup Vault Folder** before beta testing, moving machines, or experimenting with real Canvas data. Use **Settings > Tools > Export Vault Archive** when you need a portable, human-readable copy of selected vault content.
+
+---
+
+## Packaging
+
+Windows private beta packaging uses PyInstaller. Runtime source support also covers Linux desktop sessions and macOS, but packaged builds should be produced and smoke-tested on their target operating systems.
+
+See [PACKAGING.md](PACKAGING.md) for the full packaging checklist.
+
+Quick Windows beta build:
+
+```powershell
+pip install -r requirements-build.txt
+.\scripts\build_beta.ps1
+```
+
+Default output:
+
+```text
+release\ZJX-LMS-1.0.0-beta1-win64\
+release\ZJX-LMS-1.0.0-beta1-win64.zip
+```
+
+---
+
+## Architecture
+
+The project is split into small layers so UI, storage, Canvas access, and reusable services stay separated.
+
+- `app/` owns the main window, dashboard views, settings views, app actions, resource actions, Canvas actions, styles, and desktop integration.
+- `core/` owns models, validation, vault storage, file operations, URL shortcuts, and UI-neutral helpers.
+- `services/` owns Canvas HTTP access, command history, file preview, assignment reminders, Microsoft/Google document helpers, vault export, and logging.
+- `ui/` owns reusable PySide6 widgets, dialogs, context menus, icons, drag/drop support, and themed forms.
+- `tests/` contains focused unit tests for vault behaviour, dashboard logic, drag/drop, platform compatibility, startup, widgets, export, and settings.
+
+Useful references:
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [FILE_BACKEND.md](FILE_BACKEND.md)
+- [PACKAGING.md](PACKAGING.md)
+- [RELEASE_NOTES.md](RELEASE_NOTES.md)
+
+---
+
+## Testing
+
+Run the unit test suite from this `Main` directory:
+
+```powershell
+python -m unittest discover tests
+```
+
+Recommended manual smoke checks before a beta handoff:
+
+- Launch fresh and complete first-run user creation.
+- Sync one real Canvas user.
+- Browse Courses, Assignments, Files, and the Resource Library.
+- Preview at least one text, document, or image file.
+- Create a note widget, paste an image, restart, and confirm the image persists.
+- Use **Settings > Backup Vault Folder**.
+- Use **Settings > Tools > Export Vault Archive**.
+- Launch once while offline after a previous successful sync.
+
+---
+
+## Privacy And Safety
+
+ZJX LMS is local-first: the app's primary storage is the user's vault on their own machine. Canvas tokens, synced metadata, imported resources, notes, widgets, and cached images should be treated as private user data.
+
+Private beta testers should back up their vault before heavy testing, destructive resource operations, machine migration, or experiments with real Canvas accounts.
+
+---
+
+## Project Status
+
+Current release: **1.0.0-beta1**
+
+This project is in private beta. Core local vault, Canvas sync, resource management, desktop widgets, theme settings, backup, export, and Windows beta packaging workflows are present, but tester feedback and platform-specific smoke checks are still expected.
+
+---
+
+## License
+
+License not specified yet.
