@@ -47,6 +47,8 @@ class SettingsViewsMixin:
             return "ON" if self.get_smooth_scrolling_enabled() else "OFF"
         if action == "theme_mode":
             return self.effective_theme_mode().upper()
+        if action == "font_style":
+            return "MONO" if self.app_settings.get_font_style() == "monospace" else "DEFAULT"
         if action == "follow_system_theme":
             return "ON" if self.app_settings.get_follow_system_theme() else "OFF"
         if action == "accent_colour":
@@ -82,6 +84,8 @@ class SettingsViewsMixin:
             return "ON" if self.app_settings.get_notifications_enabled() else "OFF"
         if action == "tray_enabled":
             tray = getattr(self, "tray_controller", None)
+            if tray:
+                tray.refresh_capabilities(setup=False)
             if tray and not tray.tray_available:
                 return "UNAVAILABLE"
             return "ON" if self.app_settings.get_tray_enabled() else "OFF"
@@ -105,6 +109,8 @@ class SettingsViewsMixin:
             return "Enabled: inertia scrolling is active" if self.get_smooth_scrolling_enabled() else "Disabled: classic stopping scroll"
         if action == "theme_mode":
             return f"Current: {self.effective_theme_mode().title()} mode"
+        if action == "font_style":
+            return "Current: Mono-spaced Font" if self.app_settings.get_font_style() == "monospace" else "Current: Default Font"
         if action == "follow_system_theme":
             return "Enabled: follows OS theme" if self.app_settings.get_follow_system_theme() else "Disabled: manual theme mode"
         if action == "accent_colour":
@@ -136,7 +142,8 @@ class SettingsViewsMixin:
             startup = getattr(self, "startup_manager", None)
             if startup and not startup.is_supported():
                 return "Unsupported on this operating system"
-            return "Enabled: Windows launches ZJX LMS after sign-in" if self.app_settings.get_run_on_startup_enabled() else "Disabled: app only launches manually"
+            method = startup.capability_note() if startup else "OS startup registration"
+            return f"Enabled: {method}" if self.app_settings.get_run_on_startup_enabled() else "Disabled: app only launches manually"
         if action == "startup_launch_mode":
             if self.app_settings.get_startup_launch_mode() == "background_to_tray":
                 return "Startup launch stays hidden in the tray until you restore it"
@@ -145,8 +152,10 @@ class SettingsViewsMixin:
             return "Enabled: due-soon and overdue reminders can be shown" if self.app_settings.get_notifications_enabled() else "Disabled: reminders are paused"
         if action == "tray_enabled":
             tray = getattr(self, "tray_controller", None)
+            if tray:
+                tray.refresh_capabilities(setup=False)
             if tray and not tray.tray_available:
-                return "System tray is unavailable in this session"
+                return tray.capabilities.tray_status_text()
             return "Enabled: close-to-tray and reminder popups are available" if self.app_settings.get_tray_enabled() else "Disabled: close exits normally"
         if action == "close_action":
             return f"Current: {self.app_settings.get_close_action().replace('_', ' ')}"
@@ -176,6 +185,7 @@ class SettingsViewsMixin:
         history_state = "shown" if self.history_panel_visible else "hidden"
         theme_state = self.effective_theme_mode()
         follow_system_state = "on" if self.app_settings.get_follow_system_theme() else "off"
+        font_state = "Mono-spaced Font" if self.app_settings.get_font_style() == "monospace" else "Default Font"
         accent_color = self.app_settings.get_accent_color()
         scroll_speed = self.get_scroll_speed_percent()
         ui_zoom = self.ui_zoom_percent
@@ -185,6 +195,9 @@ class SettingsViewsMixin:
         startup_mode = self.app_settings.get_startup_launch_mode().replace("_", " ")
         notification_state = "on" if self.app_settings.get_notifications_enabled() else "off"
         tray_state = "on" if self.app_settings.get_tray_enabled() else "off"
+        tray = getattr(self, "tray_controller", None)
+        tray_platform = tray.capabilities.platform_label() if tray else "Unknown"
+        tray_status = tray.capabilities.tray_status_text() if tray else "Unknown"
         user = self.get_current_user()
         cards = [
             self.create_details_card(
@@ -194,6 +207,7 @@ class SettingsViewsMixin:
                     "Window layout: Adaptive and resizable",
                     f"Theme: {theme_state}",
                     f"Follow system theme: {follow_system_state}",
+                    f"Font style: {font_state}",
                     f"Accent colour: {accent_color}",
                     f"Scroll speed: {scroll_speed}%",
                     f"UI zoom: {ui_zoom}%",
@@ -205,6 +219,8 @@ class SettingsViewsMixin:
                     f"Startup launch mode: {startup_mode}",
                     f"Assignment notifications: {notification_state}",
                     f"System tray: {tray_state}",
+                    f"Platform/session: {tray_platform}",
+                    f"Tray capability: {tray_status}",
                     f"Close behaviour: {self.app_settings.get_close_action().replace('_', ' ')}",
                     f"Reminder schedule: every {self.app_settings.get_reminder_poll_minutes()} minute(s), {', '.join(self.app_settings.get_reminder_stages())}",
                     f"Canvas blacklist: {len(user.get('canvas_blacklisted_course_ids', [])) if user else 0} course(s)",
@@ -226,6 +242,7 @@ class SettingsViewsMixin:
                 "Appearance and Interface",
                 [
                     "Use the theme button beside Help to quickly switch between dark and light mode.",
+                    "Use Font Style to switch between the Default Font and Mono-spaced Font.",
                     "Use Accent Colour to change the highlight colour used by selected rows, buttons, and badges.",
                     "Enable Follow System Theme if you want the app to match the OS theme at launch.",
                     "Use Scroll Speed to reduce or increase mouse wheel and trackpad movement.",
@@ -247,9 +264,9 @@ class SettingsViewsMixin:
             self.create_tip_card(
                 "Startup Behaviour",
                 [
-                    "Run on PC Startup registers the app in Windows so it launches after you sign in.",
+                    "Run on PC Startup registers the app with the current operating system so it launches after you sign in.",
                     "Choose Startup Launch Mode if you want startup launches to stay in the tray or open the Dashboard immediately.",
-                    "Background startup works best when System Tray is enabled, because reminders can keep running without the main window being visible.",
+                    "Background startup requires a working tray; some GNOME and Wayland sessions may need tray/AppIndicator support enabled by the desktop.",
                 ],
             ),
             self.create_tip_card(

@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 
 from app.app_info import APP_NAME, APP_VERSION, APP_ORGANIZATION, APP_DESCRIPTION
 from app.settings import AppSettings
-from app.styles import APP_FONT_PRIMARY, build_app_stylesheet, build_zoom_stylesheet
+from app.styles import app_font_primary, build_app_stylesheet, build_zoom_stylesheet
 from app.ui_content import HELP_TOPIC_ORDER, HELP_TOPICS
 from app.actions import AppActionsMixin
 from app.dashboard_views import DashboardViewsMixin
@@ -356,8 +356,10 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
 
         available_geometry = QApplication.primaryScreen().availableGeometry() if QApplication.primaryScreen() else None
         if available_geometry:
-            self.window_width = min(1500, max(960, int(available_geometry.width() * 0.92)))
-            self.window_height = min(850, max(640, int(available_geometry.height() * 0.90)))
+            self.window_width = min(1500, max(720, int(available_geometry.width() * 0.92)))
+            self.window_height = min(850, max(520, int(available_geometry.height() * 0.90)))
+            self.window_width = min(self.window_width, max(640, available_geometry.width()))
+            self.window_height = min(self.window_height, max(480, available_geometry.height()))
         else:
             self.window_width = 1280
             self.window_height = 760
@@ -365,6 +367,9 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
         saved_window_size = self.app_settings.get_window_size()
         if saved_window_size:
             self.window_width, self.window_height = saved_window_size
+            if available_geometry:
+                self.window_width = min(max(640, self.window_width), max(640, available_geometry.width()))
+                self.window_height = min(max(480, self.window_height), max(480, available_geometry.height()))
 
         self.ui_zoom_percent = self.app_settings.get_ui_zoom_percent()
         self.scroll_tuner = ScrollTuner(self.get_scroll_speed_percent, self.get_smooth_scrolling_enabled, self)
@@ -406,7 +411,7 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
         if icon_path.exists():
             self.setWindowIcon(load_icon("app_icon") if False else QIcon(str(icon_path)))
         self.resize(self.window_width, self.window_height)
-        self.setMinimumSize(860, 600)
+        self.setMinimumSize(640, 480)
         self.apply_current_theme()
 
         self.load_context_from_settings()
@@ -517,8 +522,9 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
     def apply_current_theme(self):
         theme = self.effective_theme_mode()
         accent = self.app_settings.get_accent_color()
+        font_style = self.app_settings.get_font_style()
         set_icon_theme(theme)
-        stylesheet = build_app_stylesheet(theme, accent, self.ui_zoom_percent)
+        stylesheet = build_app_stylesheet(theme, accent, self.ui_zoom_percent, font_style)
         app = QApplication.instance()
         if app:
             app.setStyleSheet(stylesheet)
@@ -569,7 +575,7 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
         if not app:
             return
         font = app.font()
-        font.setFamily(APP_FONT_PRIMARY)
+        font.setFamily(app_font_primary(self.app_settings.get_font_style()))
         font.setPointSizeF(12.0)
         app.setFont(font)
 
@@ -598,9 +604,9 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
 
     def sidebar_width_bounds(self):
         collapsed_width = self.zpx(76)
-        min_expanded = max(self.zpx(260), collapsed_width + self.zpx(150))
+        min_expanded = max(self.zpx(220), collapsed_width + self.zpx(112))
         ideal_width = max(min_expanded, int(self.window_width * 0.18))
-        max_width = min(self.zpx(520), max(min_expanded, int(self.window_width * 0.42)))
+        max_width = min(self.zpx(520), max(min_expanded, int(self.window_width * 0.38)))
         return collapsed_width, min_expanded, max_width, ideal_width
 
     def clamp_sidebar_expanded_width(self, width):
@@ -741,9 +747,13 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
                 self.set_sidebar_splitter_width(target_width)
 
         if hasattr(self, "middle_panel"):
-            self.middle_panel.setMinimumWidth(max(self.zpx(280), int(self.window_width * 0.22)))
+            content_width = self.content_splitter.width() if hasattr(self, "content_splitter") and self.content_splitter.width() > 0 else max(1, self.window_width - self.sidebar_collapsed_width)
+            compact_content = content_width < self.zpx(780)
+            self.middle_panel.setMinimumWidth(self.zpx(220 if compact_content else 260))
         if hasattr(self, "right_panel"):
-            self.right_panel.setMinimumWidth(max(self.zpx(380), int(self.window_width * 0.30)))
+            content_width = self.content_splitter.width() if hasattr(self, "content_splitter") and self.content_splitter.width() > 0 else max(1, self.window_width - self.sidebar_collapsed_width)
+            compact_content = content_width < self.zpx(780)
+            self.right_panel.setMinimumWidth(self.zpx(280 if compact_content else 340))
 
         if hasattr(self, "content_splitter") and not getattr(self, "dashboard_full_width_active", False):
             sizes = self.content_splitter.sizes()
@@ -1345,10 +1355,9 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
             self.content_splitter.restoreState(saved_splitter_state)
         else:
             available_content_width = max(700, self.window_width - self.sidebar_expanded_width)
-            middle_width = self.zpx(300)
             self.content_splitter.setSizes([
-                max(320, int(available_content_width * 0.34)),
-                max(420, int(available_content_width * 0.66)),
+                max(self.zpx(240), int(available_content_width * 0.34)),
+                max(self.zpx(320), int(available_content_width * 0.66)),
             ])
 
         self.content_splitter.splitterMoved.connect(self.handle_content_splitter_moved)
@@ -1578,7 +1587,7 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
     def build_middle_panel(self):
         middle_panel = QWidget()
         middle_panel.setObjectName("MiddlePanel")
-        middle_panel.setMinimumWidth(300)
+        middle_panel.setMinimumWidth(220)
         middle_panel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         middle_layout = QVBoxLayout(middle_panel)
@@ -1717,7 +1726,7 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
     def build_right_panel(self):
         right_panel = QWidget()
         right_panel.setObjectName("RightPanel")
-        right_panel.setMinimumWidth(460)
+        right_panel.setMinimumWidth(280)
         right_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         right_layout = QVBoxLayout(right_panel)
@@ -2055,6 +2064,10 @@ class MainWindow(AppActionsMixin, DashboardViewsMixin, ResourceTreeMixin, Settin
         self.window_width = max(1, self.width())
         self.window_height = max(1, self.height())
         super().resizeEvent(event)
+        if hasattr(self, "main_splitter"):
+            QTimer.singleShot(0, lambda: self.apply_responsive_layout_metrics(update_splitters=False))
+        if hasattr(self, "apply_dashboard_responsive_metrics"):
+            QTimer.singleShot(0, self.apply_dashboard_responsive_metrics)
         if (
             getattr(self, "detail_stack", None)
             and getattr(self, "image_page", None)

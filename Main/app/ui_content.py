@@ -61,6 +61,13 @@ SETTINGS_SECTIONS = [
                 "meta": "Turn off to force a manual theme",
             },
             {
+                "label": "Font Style",
+                "action": "font_style",
+                "icon": "edit",
+                "subtitle": "Choose Default Font or Mono-spaced Font",
+                "meta": "JetBrains Mono option",
+            },
+            {
                 "label": "Accent Colour",
                 "action": "accent_colour",
                 "icon": "palette",
@@ -173,8 +180,8 @@ SETTINGS_SECTIONS = [
                 "label": "Run on PC Startup",
                 "action": "run_on_startup",
                 "icon": "system",
-                "subtitle": "Launch ZJX LMS automatically when you sign in to Windows",
-                "meta": "Windows startup registration",
+                "subtitle": "Launch ZJX LMS automatically when you sign in",
+                "meta": "OS startup registration",
             },
             {
                 "label": "Startup Launch Mode",

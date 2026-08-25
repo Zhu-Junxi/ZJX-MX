@@ -8,6 +8,8 @@ block_cipher = None
 hiddenimports = (
     collect_submodules("PySide6.QtPdf")
     + collect_submodules("PySide6.QtPdfWidgets")
+    + collect_submodules("PySide6.QtSvg")
+    + collect_submodules("PySide6.QtSvgWidgets")
     + collect_submodules("PySide6.QtMultimedia")
     + collect_submodules("PySide6.QtMultimediaWidgets")
 )

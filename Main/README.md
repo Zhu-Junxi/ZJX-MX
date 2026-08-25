@@ -24,7 +24,7 @@ python main.py
 
 ## Packaging
 
-Windows private beta packaging uses PyInstaller. See [PACKAGING.md](PACKAGING.md).
+Windows private beta packaging uses PyInstaller. Runtime support also covers Linux desktop sessions and macOS from source; see [PACKAGING.md](PACKAGING.md) for platform smoke checks and startup/tray notes.
 
 Quick build after installing build requirements:
 
@@ -39,6 +39,10 @@ Default output:
 release\ZJX-LMS-1.0.0-beta1-win64\
 release\ZJX-LMS-1.0.0-beta1-win64.zip
 ```
+
+## Platform Notes
+
+Run on startup is per-user and platform-specific: Windows uses the Run key, Linux uses freedesktop XDG Autostart, and macOS uses LaunchAgents. Minimize-to-tray depends on the current desktop session exposing a tray/status notifier; KDE Plasma, Xfce, LXQt, Cinnamon, MATE, and DDE-style sessions usually provide one, while GNOME/Wayland may require tray or AppIndicator support to be enabled.
 
 ## Local Data Location
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 
 def card_frame(object_name="DetailsCard", margins=(18, 16, 18, 16), spacing=10):
@@ -21,6 +21,8 @@ def text_label(text, object_name, word_wrap=True, selectable=False):
     label = QLabel(str(text))
     label.setObjectName(object_name)
     label.setWordWrap(word_wrap)
+    label.setMinimumWidth(0)
+    label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
     if selectable:
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
     return label
@@ -58,7 +60,7 @@ def metric_card(title, value="0"):
     """Create the standard compact metric card and return its value label."""
     card, layout = card_frame("MetricCard", margins=(14, 14, 14, 14), spacing=8)
 
-    title_label = text_label(title, "MetricTitle", word_wrap=False)
+    title_label = text_label(title, "MetricTitle", word_wrap=True)
     value_label = text_label(value, "MetricValue", word_wrap=False)
 
     layout.addWidget(title_label)

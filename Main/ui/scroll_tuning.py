@@ -27,7 +27,7 @@ class ScrollTuner(QObject):
     """
 
     MIN_PERCENT = 10
-    MAX_PERCENT = 120
+    MAX_PERCENT = 300
     DEFAULT_PERCENT = 45
     BASE_WHEEL_STEP = 56
     TIMER_INTERVAL_MS = 16

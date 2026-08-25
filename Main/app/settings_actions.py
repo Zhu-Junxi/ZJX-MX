@@ -71,7 +71,7 @@ class SettingsActionsMixin:
             self.show_text_page(
                 "Scroll Speed",
                 "Mouse wheel and trackpad tuning",
-                f"\nCurrent scroll speed: {self.get_scroll_speed_percent()}%\n\nDouble-click this setting to choose a value from 10% to 120%. Lower values slow down scrolling, which is better for laptop touchpads and high-resolution mouse wheels. The setting now applies to nested cards and labels inside scroll areas, not just the outer panel.\n",
+                f"\nCurrent scroll speed: {self.get_scroll_speed_percent()}%\n\nDouble-click this setting to choose a value from 10% to 300%. Lower values slow down scrolling for touchpads and high-resolution mouse wheels; higher values move quickly through long dashboards, resource lists, and card pages. The setting applies to nested cards and labels inside scroll areas, not just the outer panel.\n",
             )
         elif action == "ui_zoom":
             self.show_text_page(
@@ -91,6 +91,13 @@ class SettingsActionsMixin:
                 "Theme Mode",
                 "Dark and light appearance",
                 f"\nCurrent theme: {self.effective_theme_mode().title()}\nFollow system theme: {'On' if self.app_settings.get_follow_system_theme() else 'Off'}\n\nDouble-click to toggle between dark and light mode. The quick theme button beside Help does the same thing and disables Follow System Theme for manual control.\n",
+            )
+        elif action == "font_style":
+            current = "Mono-spaced Font" if self.app_settings.get_font_style() == "monospace" else "Default Font"
+            self.show_text_page(
+                "Font Style",
+                "Application typography",
+                f"\nCurrent font style: {current}\n\nDefault Font uses the app's current readable UI font stack. Mono-spaced Font uses JetBrains Mono first, with platform monospace fallbacks if JetBrains Mono is not installed.\n",
             )
         elif action == "follow_system_theme":
             self.show_text_page(
@@ -181,17 +188,22 @@ class SettingsActionsMixin:
                 self.show_text_page(
                     "Run on PC Startup",
                     "Startup registration",
-                    "\nThis option is currently unavailable because Windows startup registration is only supported on Windows builds.\n",
+                    "\nThis option is currently unavailable on this operating system.\n",
                 )
             else:
                 state = "enabled" if self.app_settings.get_run_on_startup_enabled() else "disabled"
                 command = startup.startup_command() if startup else "Unavailable"
+                platform = startup.platform_name() if startup else "this operating system"
+                target = startup.registration_target() if startup else "Unavailable"
+                support = startup.capability_note() if hasattr(startup, "capability_note") else ""
                 self.show_text_page(
                     "Run on PC Startup",
-                    "Launch automatically after Windows sign-in",
+                    f"Launch automatically after sign-in on {platform}",
                     "\n"
                     f"Run on startup is currently {state}.\n\n"
-                    "Double-click this setting to add or remove ZJX LMS from the current user's Windows startup apps.\n\n"
+                    "Double-click this setting to add or remove ZJX LMS from the current user's startup apps.\n\n"
+                    f"Registration method: {support or platform}\n"
+                    f"Registration target:\n{target}\n\n"
                     f"Registered command:\n{command}\n",
                 )
         elif action == "startup_launch_mode":
@@ -202,7 +214,7 @@ class SettingsActionsMixin:
                 "Choose how automatic startup launches behave",
                 "\n"
                 f"Current startup launch mode: {launch_text}\n\n"
-                "Background to tray keeps the app hidden when Windows starts it, so reminders can run quietly in the system tray. "
+                "Background to tray keeps the app hidden when your operating system starts it, so reminders can run quietly in the system tray when this desktop session supports tray icons. "
                 "Open Dashboard window shows the main window immediately and switches it to the Dashboard page.\n",
             )
         elif action == "notifications_enabled":
@@ -216,12 +228,13 @@ class SettingsActionsMixin:
             )
         elif action == "tray_enabled":
             tray = getattr(self, "tray_controller", None)
-            availability = "available" if not tray or tray.tray_available else "unavailable"
+            availability = tray.capabilities.tray_status_text() if tray else "unknown"
+            platform = tray.capabilities.platform_label() if tray else "this session"
             state = "enabled" if self.app_settings.get_tray_enabled() else "disabled"
             self.show_text_page(
                 "Minimize to Tray",
                 "Background reminder support",
-                f"\nSystem tray is {availability} in this session.\nTray mode is currently {state}.\n\n"
+                f"\nPlatform/session: {platform}\nSystem tray is {availability}.\nTray mode is currently {state}.\n\n"
                 "When tray mode is enabled, closing the window can hide it instead of quitting so reminders continue to run.",
             )
         elif action == "close_action":
@@ -288,6 +301,8 @@ class SettingsActionsMixin:
             self.toggle_smooth_scrolling()
         elif action == "theme_mode":
             self.toggle_theme_mode()
+        elif action == "font_style":
+            self.change_font_style()
         elif action == "follow_system_theme":
             self.toggle_follow_system_theme()
         elif action == "accent_colour":
@@ -353,16 +368,20 @@ class SettingsActionsMixin:
     def toggle_run_on_startup(self):
         startup = getattr(self, "startup_manager", None)
         if not startup or not startup.is_supported():
-            QMessageBox.information(self, "Startup Unavailable", "Run on PC Startup is only available on Windows.")
+            QMessageBox.information(self, "Startup Unavailable", "Run on PC Startup is not available on this operating system.")
             self.refresh_notification_settings_ui("run_on_startup")
             return
 
         enabled = not self.app_settings.get_run_on_startup_enabled()
-        startup.sync_enabled_state(enabled)
+        changed = startup.sync_enabled_state(enabled)
         enabled = startup.is_enabled()
         self.app_settings.set_run_on_startup_enabled(enabled)
         state = "enabled" if enabled else "disabled"
-        QMessageBox.information(self, "Startup Updated", f"Run on PC Startup is now {state}.")
+        if not changed:
+            detail = startup.last_error() or "The startup registration could not be updated."
+            QMessageBox.warning(self, "Startup Update Failed", detail)
+        else:
+            QMessageBox.information(self, "Startup Updated", f"Run on PC Startup is now {state}.")
         self.refresh_notification_settings_ui("run_on_startup")
 
     def change_startup_launch_mode(self):
@@ -377,7 +396,7 @@ class SettingsActionsMixin:
         values = ThemedFormDialog.ask(
             self,
             title="Startup Launch Mode",
-            subtitle="Choose how ZJX LMS should appear when Windows starts it automatically.",
+            subtitle="Choose how ZJX LMS should appear when your operating system starts it automatically.",
             fields=[
                 FormField(
                     "mode",
@@ -446,7 +465,7 @@ class SettingsActionsMixin:
                     kind="slider",
                     default=self.app_settings.get_reminder_poll_minutes(),
                     minimum=1,
-                    maximum=120,
+                    maximum=300,
                     step=1,
                     suffix="m",
                 ),
@@ -582,10 +601,10 @@ class SettingsActionsMixin:
                     kind="slider",
                     default=current,
                     minimum=10,
-                    maximum=120,
+                    maximum=300,
                     step=5,
                     suffix="%",
-                    hint="10% is very slow, 45% is balanced, and 100% is close to normal system speed.",
+                    hint="10% is very controlled, 45% is balanced, 100% is close to normal, and 300% is fast.",
                 )
             ],
             accept_text="Save Speed",
@@ -626,6 +645,41 @@ class SettingsActionsMixin:
 
         self.set_ui_zoom_percent(values["zoom"])
         self.show_setting_detail("ui_zoom")
+
+    def change_font_style(self):
+        labels = {
+            "Default Font": "default",
+            "Mono-spaced Font": "monospace",
+        }
+        current = "Mono-spaced Font" if self.app_settings.get_font_style() == "monospace" else "Default Font"
+        values = ThemedFormDialog.ask(
+            self,
+            title="Font Style",
+            subtitle="Choose the typography used across the app.",
+            fields=[
+                FormField(
+                    "font_style",
+                    "Application font",
+                    kind="combo",
+                    default=current,
+                    options=tuple(labels.keys()),
+                )
+            ],
+            accept_text="Save Font",
+        )
+        if not values:
+            return
+
+        style = self.app_settings.set_font_style(labels.get(values["font_style"], "default"))
+        self.apply_zoom_font()
+        self.apply_current_theme()
+        self.refresh_list_item_size_hints()
+        self.refresh_middle_panel_scaling()
+        if self.current_section == "Settings":
+            self.show_settings_section()
+        selected = "Mono-spaced Font" if style == "monospace" else "Default Font"
+        QMessageBox.information(self, "Font Updated", f"Font style set to {selected}.")
+        self.show_setting_detail("font_style")
 
     def toggle_smooth_scrolling(self):
         enabled = self.set_smooth_scrolling_enabled(not self.get_smooth_scrolling_enabled())

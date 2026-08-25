@@ -87,4 +87,4 @@ The Canvas API client still fetches the live course list first, then `CanvasActi
 - `app/app_info.py` centralises the release name/version displayed in the app and Settings.
 - `assets/app_icon.ico`, `assets/app_icon.png`, and `assets/app_icon.svg` provide the application icon assets for packaging.
 - `ui/icons.py` resolves assets through `sys._MEIPASS` when running from a bundled build, and through the project folder during development.
-- `ZJX-LMS.spec`, `scripts/build_beta.ps1`, and `PACKAGING.md` define the repeatable Windows private-beta PyInstaller build path.
+- `ZJX-LMS.spec`, `scripts/build_beta.ps1`, and `PACKAGING.md` define the repeatable Windows private-beta PyInstaller build path. Runtime startup/tray support is platform-aware for Windows, Linux desktop sessions, and macOS, with Linux behavior based on XDG/Qt capabilities rather than distro names.

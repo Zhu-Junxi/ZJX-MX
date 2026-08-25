@@ -38,7 +38,7 @@ from app.widget_manager import (
     default_shortcut_item,
     normalize_action_target,
 )
-from app.styles import APP_FONT_STACK, build_context_menu_styles, scaled_font_px
+from app.styles import app_font_stack, build_context_menu_styles, scaled_font_px
 from core.helpers import format_due_datetime
 from ui.context_menus import AppContextMenu, add_menu_action
 from ui.icons import load_icon
@@ -190,6 +190,7 @@ def widget_editor_popup_stylesheet(manager):
     accent = manager.main_window.app_settings.get_accent_color()
     theme = manager.main_window.effective_theme_mode()
     zoom_percent = getattr(manager.main_window, "ui_zoom_percent", 100)
+    font_stack = app_font_stack(manager.main_window.app_settings.get_font_style())
     colours = manager_editor_colours(theme, accent)
     base = scaled_font_px(15, zoom_percent)
     small = scaled_font_px(13, zoom_percent)
@@ -201,13 +202,13 @@ def widget_editor_popup_stylesheet(manager):
     QDialog#ThemedFormDialog {{
         background-color: {colours['window_bg']};
         color: {colours['text']};
-        font-family: {APP_FONT_STACK};
+        font-family: {font_stack};
         font-size: {base}px;
     }}
     QDialog QWidget {{
         background-color: transparent;
         color: {colours['text']};
-        font-family: {APP_FONT_STACK};
+        font-family: {font_stack};
         font-size: {base}px;
     }}
     QDialog QFrame#DialogCard {{
@@ -1149,6 +1150,7 @@ class WidgetsManagerWindow(QMainWindow):
         accent = self.manager.main_window.app_settings.get_accent_color()
         theme = self.manager.main_window.effective_theme_mode()
         zoom_percent = getattr(self.manager.main_window, "ui_zoom_percent", 100)
+        font_stack = app_font_stack(self.manager.main_window.app_settings.get_font_style())
         colours = manager_editor_colours(theme, accent)
         base = scaled_font_px(17, zoom_percent)
         secondary = scaled_font_px(16, zoom_percent)
@@ -1165,13 +1167,13 @@ class WidgetsManagerWindow(QMainWindow):
         QMainWindow#WidgetsManagerWindow QWidget {{
             color: {colours['text']};
             background-color: transparent;
-            font-family: {APP_FONT_STACK};
+            font-family: {font_stack};
             font-size: {base}px;
         }}
         QMainWindow#WidgetsManagerWindow QLabel {{
             color: {colours['text']};
             background-color: transparent;
-            font-family: {APP_FONT_STACK};
+            font-family: {font_stack};
             font-size: {base}px;
         }}
         QMainWindow#WidgetsManagerWindow QLabel#PageTitle {{

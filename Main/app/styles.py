@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 STYLE_TOKENS = {
@@ -12,7 +13,28 @@ STYLE_TOKENS = {
 }
 
 APP_FONT_PRIMARY = "Segoe UI"
+APP_MONOSPACE_FONT_PRIMARY = "JetBrains Mono"
 APP_FONT_STACK = '"Segoe UI", "Inter", "SF Pro Display", "Roboto", "Arial", sans-serif'
+APP_MONOSPACE_FONT_STACK = '"JetBrains Mono", "Cascadia Code", "SF Mono", "Consolas", "Liberation Mono", monospace'
+
+
+def app_font_primary(font_style="default"):
+    return APP_MONOSPACE_FONT_PRIMARY if str(font_style or "").lower() == "monospace" else APP_FONT_PRIMARY
+
+
+def app_font_stack(font_style="default"):
+    return APP_MONOSPACE_FONT_STACK if str(font_style or "").lower() == "monospace" else APP_FONT_STACK
+
+
+def _asset_root() -> Path:
+    bundled_root = getattr(sys, "_MEIPASS", None)
+    if bundled_root:
+        return Path(bundled_root) / "assets"
+    return Path(__file__).resolve().parent.parent / "assets"
+
+
+def _asset_path(*parts: str) -> Path:
+    return _asset_root().joinpath(*parts)
 
 
 def scaled_font_px(value, zoom_percent=100, minimum=10):
@@ -1331,7 +1353,7 @@ QPushButton#AssignmentRowButton {{
 """
 
 
-def build_typography_normalization_styles(zoom_percent=100):
+def build_typography_normalization_styles(zoom_percent=100, font_style="default"):
     """Final, zoom-aware typography pass for consistent readable text."""
     base = scaled_font_px(17, zoom_percent)
     secondary = scaled_font_px(16, zoom_percent)
@@ -1347,6 +1369,7 @@ def build_typography_normalization_styles(zoom_percent=100):
     sidebar_history = scaled_font_px(16, zoom_percent)
     metric = scaled_font_px(50, zoom_percent)
     code = scaled_font_px(16, zoom_percent)
+    font_stack = app_font_stack(font_style)
 
     return f"""
 /* Final typography normalization: one readable app font, scaled with UI zoom. */
@@ -1357,7 +1380,7 @@ QInputDialog,
 QFileDialog,
 QMenu,
 QToolTip {{
-    font-family: {APP_FONT_STACK};
+    font-family: {font_stack};
     font-size: {base}px;
 }}
 
@@ -1374,7 +1397,7 @@ QTreeWidget,
 QTableWidget,
 QHeaderView::section,
 QMenu::item {{
-    font-family: {APP_FONT_STACK};
+    font-family: {font_stack};
     font-size: {base}px;
 }}
 
@@ -1479,7 +1502,7 @@ QPlainTextEdit,
 QTextEdit#PreviewText,
 QTextEdit#RichDocumentPreview,
 QTextEdit#LibraryDetails {{
-    font-family: {APP_FONT_STACK};
+    font-family: {font_stack};
     font-size: {body}px;
 }}
 
@@ -1845,7 +1868,7 @@ def build_component_override_styles(theme="dark", accent="#2563eb"):
     )
 
 
-def build_app_stylesheet(theme="dark", accent="#2563eb", zoom_percent=100):
+def build_app_stylesheet(theme="dark", accent="#2563eb", zoom_percent=100, font_style="default"):
     """Return the app stylesheet with theme/accent overrides applied.
 
     The base QSS is dark-first because that was the original UI. The dynamic
@@ -1855,7 +1878,7 @@ def build_app_stylesheet(theme="dark", accent="#2563eb", zoom_percent=100):
     accent = accent or "#2563eb"
     accent_hover = _adjust_hex(accent, 1.22)
     accent_dark = _adjust_hex(accent, 0.72)
-    check_icon = _qss_url(Path(__file__).resolve().parent.parent / "assets" / "icons" / "check.svg")
+    check_icon = _qss_url(_asset_path("icons", "check.svg"))
 
     dynamic = f"""
 /* Dynamic theme/accent layer */
@@ -2068,7 +2091,7 @@ QSlider#DialogSlider {
             + build_zoom_stylesheet(zoom_percent)
             + build_tree_browser_styles(theme, accent, zoom_percent)
             + build_final_slider_styles(theme, accent)
-            + build_typography_normalization_styles(zoom_percent)
+            + build_typography_normalization_styles(zoom_percent, font_style)
             + build_sidebar_nav_styles(theme, accent, zoom_percent)
             + build_export_vault_dialog_styles(theme, accent, zoom_percent)
         )
@@ -2755,7 +2778,7 @@ QTextEdit#LibraryDetails {{
         + build_zoom_stylesheet(zoom_percent)
         + build_tree_browser_styles(theme, accent, zoom_percent)
         + build_final_slider_styles(theme, accent)
-        + build_typography_normalization_styles(zoom_percent)
+        + build_typography_normalization_styles(zoom_percent, font_style)
         + build_sidebar_nav_styles(theme, accent, zoom_percent)
         + build_export_vault_dialog_styles(theme, accent, zoom_percent)
     )
@@ -2767,7 +2790,7 @@ def build_export_vault_dialog_styles(theme="dark", accent="#2563eb", zoom_percen
     accent = accent or "#2563eb"
     accent_hover = _adjust_hex(accent, 1.22)
     accent_dark = _adjust_hex(accent, 0.72)
-    check_icon = _qss_url(Path(__file__).resolve().parent.parent / "assets" / "icons" / "check.svg")
+    check_icon = _qss_url(_asset_path("icons", "check.svg"))
 
     def px(value):
         return max(1, int(round(value * zoom)))
@@ -3800,7 +3823,7 @@ QComboBox#DashboardControlCombo::drop-down {
 }
 
 QComboBox#DashboardControlCombo::down-arrow {
-    image: url(Main/assets/icons/chevron-down.svg);
+    image: url("{dashboard_chevron_down_icon}");
     width: 12px;
     height: 12px;
 }
@@ -4150,7 +4173,10 @@ QPushButton#PrimarySmallButton {
 QPushButton#PrimarySmallButton:hover {
     background-color: #6d28d9;
 }
-"""
+""".replace(
+    "{dashboard_chevron_down_icon}",
+    _qss_url(_asset_path("icons", "chevron-down.svg")),
+)
 
 APP_STYLESHEET += """
 /* Final selected-row visibility fix: keep multi-selected tree/list rows visibly

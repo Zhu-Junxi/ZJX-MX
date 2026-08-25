@@ -131,6 +131,17 @@ class AppSettings:
         self.settings.setValue("ui_zoom_percent", percent)
         return percent
 
+    def get_font_style(self):
+        value = str(self.settings.value("font_style", "default") or "default").lower()
+        return value if value in {"default", "monospace"} else "default"
+
+    def set_font_style(self, style):
+        value = str(style or "default").lower()
+        if value not in {"default", "monospace"}:
+            value = "default"
+        self.settings.setValue("font_style", value)
+        return value
+
 
     def get_scroll_speed_percent(self):
         value = self.settings.value("scroll_speed_percent", 45)
@@ -140,7 +151,7 @@ class AppSettings:
         except (TypeError, ValueError):
             value = 45
 
-        return max(10, min(120, value))
+        return max(10, min(300, value))
 
     def set_scroll_speed_percent(self, percent):
         try:
@@ -148,7 +159,7 @@ class AppSettings:
         except (TypeError, ValueError):
             percent = 45
 
-        percent = max(10, min(120, percent))
+        percent = max(10, min(300, percent))
         self.settings.setValue("scroll_speed_percent", percent)
         return percent
 

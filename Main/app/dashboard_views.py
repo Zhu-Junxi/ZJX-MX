@@ -19,6 +19,39 @@ from ui.icons import load_icon
 from ui.themed_forms import FormField, ThemedFormDialog, ThemedMessageDialog
 
 
+class TimelineElidedLabel(QLabel):
+    """Single-line timeline label that uses ... when text exceeds its width."""
+
+    def __init__(self, text="", parent=None):
+        super().__init__("", parent)
+        self._full_text = ""
+        self.setWordWrap(False)
+        self.setMinimumWidth(0)
+        self.setText(text)
+
+    def setText(self, text):
+        self._full_text = str(text or "")
+        self.setToolTip(self._full_text)
+        self._refresh_text()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._refresh_text()
+
+    def _refresh_text(self):
+        if self.width() <= 2:
+            QLabel.setText(self, self._full_text)
+            return
+        QLabel.setText(
+            self,
+            self.fontMetrics().elidedText(
+                self._full_text,
+                Qt.TextElideMode.ElideRight,
+                self.width() - 2,
+            ),
+        )
+
+
 SUMMARY_METRIC_CHOICES = (
     ("overdue", "Overdue", "Open past due"),
     ("due_today", "Due Today", "Open today"),
@@ -169,6 +202,7 @@ class ScaledTimelineWidget(QWidget):
         self._timeline_markers = []
         self._visible_items = []
         self._card_width = 150
+        self._card_height = 76
         self._today_x = 0
         self._axis_start_x = 0
         self._axis_end_x = 0
@@ -273,6 +307,7 @@ class ScaledTimelineWidget(QWidget):
         return "same time"
 
     def _update_width_hint(self):
+        self._update_card_metrics()
         card_width = self._card_width
         margin = 8
         min_gap = 10
@@ -280,7 +315,7 @@ class ScaledTimelineWidget(QWidget):
         due_values = [item.due_at for item in visible_items if item.due_at]
 
         parent_width = self.parentWidget().width() if self.parentWidget() else self.width()
-        base_width = max(640, parent_width)
+        base_width = max(320, parent_width)
         visible_unit_count = sum(1 for item in visible_items if item.due_at)
         count_width = (max(1, visible_unit_count) * (card_width + min_gap)) + (2 * margin)
         scaled_width = base_width
@@ -289,7 +324,7 @@ class ScaledTimelineWidget(QWidget):
             start = min(min(due_values), self.now)
             end = max(max(due_values), self.now)
             span_days = max(1, int(((end - start).total_seconds() + 86399) // 86400))
-            scaled_width = (span_days * 110) + card_width + (2 * margin)
+            scaled_width = (span_days * max(72, min(110, int(parent_width * 0.16)))) + card_width + (2 * margin)
 
         desired_width = min(6000, max(base_width, count_width, scaled_width))
         if self.width() != desired_width:
@@ -299,8 +334,9 @@ class ScaledTimelineWidget(QWidget):
         if not self.cards:
             return
 
+        self._update_card_metrics()
         card_width = self._card_width
-        card_height = 76
+        card_height = self._card_height
         card_top = 62
         margin = 8
         min_gap = 10
@@ -395,6 +431,11 @@ class ScaledTimelineWidget(QWidget):
         card.move(int(x), int(y))
         card.show()
         card.raise_()
+
+    def _update_card_metrics(self):
+        parent_width = self.parentWidget().width() if self.parentWidget() else self.width()
+        self._card_width = max(132, min(180, int(parent_width * 0.28))) if parent_width else 150
+        self._card_height = 92 if self._card_width < 150 else 82
 
 
 class DashboardViewsMixin:
@@ -715,14 +756,17 @@ class DashboardViewsMixin:
         title_label = QLabel(title)
         title_label.setObjectName("CardMeta")
         title_label.setWordWrap(True)
+        title_label.setMinimumWidth(0)
 
         value_label = QLabel(value)
         value_label.setObjectName("AssignmentInfoValue")
         value_label.setWordWrap(True)
+        value_label.setMinimumWidth(0)
 
         subtext_label = QLabel(subtext)
         subtext_label.setObjectName("CardBody")
         subtext_label.setWordWrap(True)
+        subtext_label.setMinimumWidth(0)
 
         layout.addWidget(title_label)
         layout.addWidget(value_label)
@@ -750,7 +794,8 @@ class DashboardViewsMixin:
 
         title_label = QLabel(title)
         title_label.setObjectName("CardMeta")
-        title_label.setWordWrap(False)
+        title_label.setWordWrap(True)
+        title_label.setMinimumWidth(0)
 
         edit_btn = QToolButton()
         edit_btn.setObjectName("SummaryMetricEditButton")
@@ -766,10 +811,12 @@ class DashboardViewsMixin:
         value_label = QLabel(value)
         value_label.setObjectName("AssignmentInfoValue")
         value_label.setWordWrap(False)
+        value_label.setMinimumWidth(0)
 
         subtext_label = QLabel(subtext)
         subtext_label.setObjectName("CardBody")
-        subtext_label.setWordWrap(False)
+        subtext_label.setWordWrap(True)
+        subtext_label.setMinimumWidth(0)
 
         layout.addLayout(header_row)
         layout.addWidget(value_label)
@@ -806,9 +853,11 @@ class DashboardViewsMixin:
         toolbar.setObjectName("DeadlineDashboardToolbar")
         toolbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         toolbar.setFixedHeight(50)
-        toolbar_layout = QHBoxLayout(toolbar)
+        toolbar_layout = QGridLayout(toolbar)
+        self.global_dashboard_toolbar_layout = toolbar_layout
         toolbar_layout.setContentsMargins(0, 0, 0, 0)
-        toolbar_layout.setSpacing(8)
+        toolbar_layout.setHorizontalSpacing(8)
+        toolbar_layout.setVerticalSpacing(8)
 
         toolbar_left_group = QFrame()
         toolbar_left_group.setObjectName("DeadlineToolbarGroup")
@@ -826,8 +875,9 @@ class DashboardViewsMixin:
 
         self.global_dashboard_timeframe_combo = QComboBox()
         self.global_dashboard_timeframe_combo.setObjectName("DashboardControlCombo")
-        self.global_dashboard_timeframe_combo.setFixedWidth(190)
-        self.global_dashboard_timeframe_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.global_dashboard_timeframe_combo.setMinimumWidth(130)
+        self.global_dashboard_timeframe_combo.setMaximumWidth(190)
+        self.global_dashboard_timeframe_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.global_dashboard_timeframe_combo.addItem("Today", "today")
         self.global_dashboard_timeframe_combo.addItem("Next 3 Days", "next_3_days")
         self.global_dashboard_timeframe_combo.addItem("Next 7 Days", "next_7_days")
@@ -874,15 +924,20 @@ class DashboardViewsMixin:
         toolbar_right_layout.addWidget(self.global_dashboard_customize_btn)
         toolbar_right_layout.addWidget(self.global_dashboard_sync_btn)
 
-        toolbar_layout.addWidget(toolbar_left_group, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        toolbar_layout.addStretch()
-        toolbar_layout.addWidget(toolbar_right_group, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.global_dashboard_toolbar = toolbar
+        self.global_dashboard_toolbar_left_group = toolbar_left_group
+        self.global_dashboard_toolbar_right_group = toolbar_right_group
+        toolbar_layout.addWidget(toolbar_left_group, 0, 0)
+        toolbar_layout.addWidget(toolbar_right_group, 0, 1)
+        toolbar_layout.setColumnStretch(0, 1)
+        toolbar_layout.setColumnStretch(1, 0)
 
         self.global_summary_panel = QFrame()
         self.global_summary_panel.setObjectName("DeadlineSummaryPanel")
         self.global_summary_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.global_summary_panel.setFixedHeight(112)
         summary_layout = QGridLayout(self.global_summary_panel)
+        self.global_summary_layout = summary_layout
         summary_layout.setContentsMargins(0, 0, 0, 0)
         summary_layout.setHorizontalSpacing(10)
         summary_layout.setVerticalSpacing(10)
@@ -1010,7 +1065,7 @@ class DashboardViewsMixin:
         self.global_timeline_panel = QFrame()
         self.global_timeline_panel.setObjectName("ContentPanel")
         self.global_timeline_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        self.global_timeline_panel.setMinimumHeight(250)
+        self.global_timeline_panel.setMinimumHeight(238)
         timeline_layout = QVBoxLayout(self.global_timeline_panel)
         timeline_layout.setContentsMargins(18, 16, 18, 16)
         timeline_layout.setSpacing(12)
@@ -1027,7 +1082,8 @@ class DashboardViewsMixin:
         self.global_timeline_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.global_timeline_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.global_timeline_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.global_timeline_scroll.setFixedHeight(172)
+        self.global_timeline_scroll.setMinimumHeight(172)
+        self.global_timeline_scroll.setMaximumHeight(212)
         self.global_timeline_cards = []
         for _ in range(8):
             timeline_card = self.create_timeline_card()
@@ -1047,6 +1103,55 @@ class DashboardViewsMixin:
         self.global_dashboard_scroll.setWidget(content)
         outer_layout.addWidget(self.global_dashboard_scroll)
         return page
+
+    def dashboard_available_width(self):
+        scroll = getattr(self, "global_dashboard_scroll", None)
+        if scroll is not None and scroll.viewport() is not None and scroll.viewport().width() > 0:
+            return scroll.viewport().width()
+        if hasattr(self, "right_panel") and self.right_panel.width() > 0:
+            return self.right_panel.width()
+        return max(1, getattr(self, "window_width", 960))
+
+    def apply_dashboard_responsive_metrics(self):
+        if not hasattr(self, "global_dashboard_scroll"):
+            return
+
+        width = self.dashboard_available_width()
+        narrow = width < self.zpx(680) if hasattr(self, "zpx") else width < 680
+        very_narrow = width < self.zpx(520) if hasattr(self, "zpx") else width < 520
+
+        if hasattr(self, "global_dashboard_toolbar"):
+            self.global_dashboard_toolbar.setFixedHeight(self.zpx(104) if narrow and hasattr(self, "zpx") else (104 if narrow else 50))
+            layout = self.global_dashboard_toolbar_layout
+            layout.addWidget(self.global_dashboard_toolbar_left_group, 0, 0, 1, 2 if narrow else 1)
+            layout.addWidget(self.global_dashboard_toolbar_right_group, 1 if narrow else 0, 0 if narrow else 1, 1, 2 if narrow else 1)
+            layout.setColumnStretch(0, 1)
+            layout.setColumnStretch(1, 1 if narrow else 0)
+
+        if hasattr(self, "global_summary_layout"):
+            columns = 1 if very_narrow else (2 if narrow else 4)
+            self.repack_summary_cards(columns)
+            rows = (len(self.global_summary_cards) + columns - 1) // columns
+            card_height = self.zpx(98) if hasattr(self, "zpx") else 98
+            self.global_summary_panel.setFixedHeight(max(card_height, rows * card_height + ((rows - 1) * 10)))
+
+        if hasattr(self, "global_next_due_panel"):
+            self.global_next_due_panel.setMinimumHeight(self.zpx(190 if narrow else 152) if hasattr(self, "zpx") else (190 if narrow else 152))
+
+        if hasattr(self, "global_timeline_scroll"):
+            timeline_height = self.zpx(204 if narrow else 172) if hasattr(self, "zpx") else (204 if narrow else 172)
+            self.global_timeline_scroll.setMinimumHeight(timeline_height)
+            self.global_timeline_scroll.setMaximumHeight(timeline_height)
+            self.global_timeline_scale._update_width_hint()
+
+        self.deadline_dashboard_grid_columns = 1 if narrow else 2
+
+    def repack_summary_cards(self, columns):
+        self.detach_dashboard_layout_items(self.global_summary_layout)
+        for index, metric in enumerate(self.global_summary_cards):
+            self.global_summary_layout.addWidget(metric["card"], index // columns, index % columns)
+        for column in range(max(1, columns)):
+            self.global_summary_layout.setColumnStretch(column, 1)
 
     def deadline_dashboard_settings(self):
         if hasattr(self.app_settings, "get_deadline_dashboard_settings"):
@@ -1412,9 +1517,9 @@ class DashboardViewsMixin:
         card = QFrame()
         card.setObjectName("DeadlineAssignmentCard")
         card.setCursor(Qt.CursorShape.PointingHandCursor)
-        card.setMinimumHeight(86)
-        card.setMaximumHeight(96)
-        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        card.setMinimumHeight(92)
+        card.setMaximumHeight(132)
+        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         card._deadline_assignment = None
         card._deadline_course = None
 
@@ -1428,18 +1533,19 @@ class DashboardViewsMixin:
 
         title = QLabel("")
         title.setObjectName("CardTitle")
-        title.setWordWrap(False)
-        title.setMaximumHeight(24)
+        title.setWordWrap(True)
+        title.setMinimumWidth(0)
+        title.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         course_label = QLabel("")
         course_label.setObjectName("CardMeta")
-        course_label.setWordWrap(False)
-        course_label.setMaximumHeight(20)
+        course_label.setWordWrap(True)
+        course_label.setMinimumWidth(0)
 
         detail_label = QLabel("")
         detail_label.setObjectName("CardMeta")
-        detail_label.setWordWrap(False)
-        detail_label.setMaximumHeight(20)
+        detail_label.setWordWrap(True)
+        detail_label.setMinimumWidth(0)
 
         name_col.addWidget(title)
         name_col.addWidget(course_label)
@@ -1657,9 +1763,8 @@ class DashboardViewsMixin:
         header_row.setContentsMargins(0, 0, 0, 0)
         header_row.setSpacing(6)
 
-        due = QLabel("")
+        due = TimelineElidedLabel("")
         due.setObjectName("DeadlineTimelineDate")
-        due.setWordWrap(False)
 
         count_badge = QLabel("")
         count_badge.setObjectName("DeadlineTimelineClusterBadge")
@@ -1667,10 +1772,9 @@ class DashboardViewsMixin:
         count_badge.setFixedHeight(18)
         count_badge.hide()
 
-        title = QLabel("")
+        title = TimelineElidedLabel("")
         title.setObjectName("DeadlineTimelineTitle")
-        title.setWordWrap(True)
-        course = QLabel("")
+        course = TimelineElidedLabel("")
         course.setObjectName("CardMeta")
 
         header_row.addWidget(due, 1)
@@ -1799,15 +1903,18 @@ class DashboardViewsMixin:
 
     def repack_deadline_grid_groups(self, visible_group_keys):
         self.detach_dashboard_layout_items(self.global_countdown_grid_layout)
+        columns = max(1, int(getattr(self, "deadline_dashboard_grid_columns", 2) or 2))
         for index, group_key in enumerate(visible_group_keys):
             panel = self.deadline_group_panels["grid"].get(group_key)
             if panel:
                 self.global_countdown_grid_layout.addWidget(
                     panel,
-                    index // 2,
-                    index % 2,
+                    index // columns,
+                    index % columns,
                     Qt.AlignmentFlag.AlignTop,
                 )
+        for column in range(columns):
+            self.global_countdown_grid_layout.setColumnStretch(column, 1)
 
     def refresh_timeline_cards(self, data, settings):
         self.global_timeline_panel.setVisible(settings.show_timeline)
@@ -1841,6 +1948,7 @@ class DashboardViewsMixin:
             self.animate_detail_change()
 
     def render_global_dashboard_page(self, data, settings):
+        self.apply_dashboard_responsive_metrics()
         self.update_global_summary_metrics(data, settings)
         self.global_next_due_panel.setVisible(settings.show_next_due)
 

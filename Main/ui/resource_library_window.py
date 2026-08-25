@@ -807,7 +807,8 @@ class ResourceLibraryWindow(QMainWindow):
         panel_border = "#d7deea" if is_light else "#243042"
         muted = "#64748b" if is_light else "#8ea1bd"
         title = "#0f172a" if is_light else "#f8fafc"
-        self.setStyleSheet(build_app_stylesheet(theme, accent, zoom) + f"""
+        font_style = self.main_window.app_settings.get_font_style() if hasattr(self.main_window, "app_settings") else "default"
+        self.setStyleSheet(build_app_stylesheet(theme, accent, zoom, font_style) + f"""
             QWidget {{
                 background-color: {window_bg};
             }}

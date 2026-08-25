@@ -4,6 +4,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from app.platform_capabilities import PlatformCapabilities
 from services.assignment_reminders import collect_reminder_candidates, snooze_until
 from ui.icons import load_app_icon, load_icon
 from ui.signal_helpers import connect_owned_slot
@@ -15,7 +16,9 @@ class TrayController:
     def __init__(self, main_window):
         self.main_window = main_window
         self.settings = main_window.app_settings
-        self.tray_available = QSystemTrayIcon.isSystemTrayAvailable()
+        self.capabilities = PlatformCapabilities()
+        self.tray_available = self.capabilities.tray_available
+        self.tray_messages_supported = self.capabilities.tray_messages_supported
         self.tray_icon = None
         self.menu = None
         self._actions = []
@@ -23,11 +26,14 @@ class TrayController:
 
         self.timer = QTimer(main_window)
         connect_owned_slot(self.timer, "timeout", self.check_reminders)
+        self.availability_timer = QTimer(main_window)
+        connect_owned_slot(self.availability_timer, "timeout", self.refresh_capabilities)
 
         if self.tray_available and self.settings.get_tray_enabled():
             self.setup_tray()
 
         self.restart_timer()
+        self.availability_timer.start(5000)
         QTimer.singleShot(1500, self.check_reminders)
 
     def setup_tray(self):
@@ -85,6 +91,7 @@ class TrayController:
         window.activateWindow()
 
     def tray_can_run(self):
+        self.refresh_capabilities(setup=False)
         return (
             self.tray_available
             and self.settings.get_tray_enabled()
@@ -92,12 +99,22 @@ class TrayController:
             and self.tray_icon.isVisible()
         )
 
+    def tray_can_notify(self):
+        return self.tray_can_run() and self.tray_messages_supported
+
+    def refresh_capabilities(self, *, setup=True):
+        self.capabilities = PlatformCapabilities()
+        self.tray_available = self.capabilities.tray_available
+        self.tray_messages_supported = self.capabilities.tray_messages_supported
+        if setup and self.tray_icon is None and self.tray_available and self.settings.get_tray_enabled():
+            self.setup_tray()
+
     def check_reminders(self):
         candidates = self.collect_due_reminder_candidates(respect_settings=True, respect_sent=True)
         if not candidates:
             return []
 
-        if self.tray_can_run():
+        if self.tray_can_notify():
             sent = self.show_candidates(candidates)
             self.settings.add_sent_reminder_keys(sent)
         return candidates
@@ -127,6 +144,7 @@ class TrayController:
         return self.check_reminders()
 
     def replay_next_developer_reminder(self):
+        self.refresh_capabilities()
         if self.tray_icon is None and self.tray_available:
             self.setup_tray()
         candidates = self.collect_due_reminder_candidates(respect_settings=False, respect_sent=False)
@@ -160,7 +178,7 @@ class TrayController:
         )
 
     def show_assignment_notification_body(self, title, body, timeout_ms=10000):
-        if not self.tray_can_run():
+        if not self.tray_can_notify():
             return False
         self.tray_icon.showMessage(
             title,
@@ -180,6 +198,7 @@ class TrayController:
             self.main_window.show_setting_detail("notifications_enabled")
 
     def refresh(self):
+        self.refresh_capabilities(setup=False)
         if self.tray_icon is None and self.tray_available and self.settings.get_tray_enabled():
             self.setup_tray()
         elif self.tray_icon is not None and not self.settings.get_tray_enabled():
@@ -193,6 +212,7 @@ class TrayController:
         self._quitting = True
         self.main_window.force_quit_requested = True
         self.timer.stop()
+        self.availability_timer.stop()
         if self.tray_icon is not None:
             self.tray_icon.hide()
         self.main_window.close()
