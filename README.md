@@ -186,27 +186,6 @@ Useful references:
 
 ---
 
-## Testing
-
-Run the unit test suite from this `Main` directory:
-
-```powershell
-python -m unittest discover tests
-```
-
-Recommended manual smoke checks before a beta handoff:
-
-- Launch fresh and complete first-run user creation.
-- Sync one real Canvas user.
-- Browse Courses, Assignments, Files, and the Resource Library.
-- Preview at least one text, document, or image file.
-- Create a note widget, paste an image, restart, and confirm the image persists.
-- Use **Settings > Backup Vault Folder**.
-- Use **Settings > Tools > Export Vault Archive**.
-- Launch once while offline after a previous successful sync.
-
----
-
 ## Privacy And Safety
 
 ZJX LMS is local-first: the app's primary storage is the user's vault on their own machine. Canvas tokens, synced metadata, imported resources, notes, widgets, and cached images should be treated as private user data.
@@ -223,6 +202,12 @@ This project is in private beta. Core local vault, Canvas sync, resource managem
 
 ---
 
-## License
+## MIT License
 
-License not specified yet.
+Copyright 2026 ©️ZJX
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACT
