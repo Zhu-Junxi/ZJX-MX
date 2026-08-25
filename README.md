@@ -30,15 +30,15 @@ The app stores user profiles, courses, assignments, announcements, resources, de
 
 > Screenshots are not currently checked into this repository. The image links below are ready for future GitHub screenshots and should be added under `docs/images/`.
 
-![Dashboard screenshot placeholder](docs/images/dashboard.png)
+<img width="2560" height="1380" alt="Image" src="https://github.com/user-attachments/assets/b46e8afb-848a-499e-90a3-fcac6aadcaae" />
 
-![Course view screenshot placeholder](docs/images/course-view.png)
+<img width="2560" height="1378" alt="Image" src="https://github.com/user-attachments/assets/4ceff306-5bd1-4eea-8463-08502a297908" />
 
-![Resource Library screenshot placeholder](docs/images/resource-library.png)
+<img width="2560" height="1380" alt="Image" src="https://github.com/user-attachments/assets/bf9bea9f-2681-48d4-9368-e27effe940e6" />
 
-![Widgets Manager screenshot placeholder](docs/images/widgets-manager.png)
+<img width="2560" height="1385" alt="Image" src="https://github.com/user-attachments/assets/c54ba889-9d8f-4750-af92-b10af88af56c" />
 
-![Settings screenshot placeholder](docs/images/settings.png)
+<img width="2560" height="1399" alt="Image" src="https://github.com/user-attachments/assets/7311dc73-5d4f-40aa-abe8-1412c1a14c51" />
 
 ---
 
@@ -79,22 +79,6 @@ The app stores user profiles, courses, assignments, announcements, resources, de
 - Adjust accent colour, UI zoom, font style, scroll speed, and assignment reminder behaviour.
 - Use platform-aware startup registration on Windows, Linux desktop sessions, and macOS.
 - Minimize to tray when the current desktop session exposes tray/status notifier support.
-
----
-
-## Screenshots To Add
-
-Add these images under `docs/images/` when screenshots are available:
-
-| File | What To Capture |
-| --- | --- |
-| `dashboard.png` | The global dashboard with upcoming assignments, deadline states, and a visible course summary. |
-| `course-view.png` | The sidebar, a selected course dashboard, assignment list, and course resource panel. |
-| `resource-library.png` | The Resource Library with a file or note preview, resource browsing, and archived assignment access. |
-| `widgets-manager.png` | The Widgets Manager showing an assignment countdown, shortcut panel, and note widget setup. |
-| `settings.png` | Theme/accent controls, backup/export tools, notification options, and tray/startup settings. |
-
-For best GitHub presentation, use clean sample data, hide real Canvas tokens or personal information, and capture images at a wide desktop size such as `1440x900` or `1600x1000`.
 
 ---
 
