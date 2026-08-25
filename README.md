@@ -1,7 +1,7 @@
 # ZJX LMS
 
 <p align="center">
-  <img src="assets/app_icon.png" alt="ZJX LMS app icon" width="128">
+  <img width="128" alt="ZJX LMS app icon" src="https://github.com/user-attachments/assets/47e402cd-b199-4f24-9b60-966f2351a6b6" />
 </p>
 
 <p align="center">
