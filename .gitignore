@@ -2,3 +2,5 @@
 .venv
 release/
 __pycache__
+dist/
+build/
