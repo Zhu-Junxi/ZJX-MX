@@ -24,21 +24,44 @@ python main.py
 
 ## Packaging
 
-Windows private beta packaging uses PyInstaller. Runtime support also covers Linux desktop sessions and macOS from source; see [PACKAGING.md](PACKAGING.md) for platform smoke checks and startup/tray notes.
+All three platform scripts use PyInstaller, compile-check the Python sources, verify bundled assets, and create a release folder and archive. Run each script on its target operating system. Dependencies must be installed first; the scripts do not install packages automatically.
 
-Quick build after installing build requirements:
+### Windows
 
 ```powershell
-pip install -r requirements-build.txt
+pip install -r requirements.txt -r requirements-build.txt
 .\scripts\build_beta.ps1
 ```
 
-Default output:
+Output: `release/ZJX-LMS-1.0.0-beta1-win64/` and matching `.zip`.
 
-```text
-release\ZJX-LMS-1.0.0-beta1-win64\
-release\ZJX-LMS-1.0.0-beta1-win64.zip
+### Linux (including CachyOS) and macOS
+
+From `Main`, prepare an environment with Python 3.10 or newer supported by the installed PySide6 and PyInstaller versions:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt -r requirements-build.txt
+
+# On Linux:
+./scripts/build_beta_linux.sh
+
+# On macOS:
+./scripts/build_beta_macos.sh
 ```
+
+Both scripts prefer `.venv/bin/python`, then `python3`, then `python`. They work from any current directory. Supply an optional version, for example `./scripts/build_beta_linux.sh 1.0.0-beta2`, or use `--help`.
+
+- Linux produces `release/ZJX-LMS-<version>-linux-<arch>/` and a matching `.tar.gz`. Extract the entire archive, then run the `ZJX LMS` executable inside the folder.
+- macOS produces `release/ZJX-LMS-<version>-macos-<arch>/ZJX LMS.app` and a matching `.zip`. Open the `.app` in Finder or with `open`. Native `sips`, `iconutil`, and `ditto` tools generate the icon and preserve bundle metadata when archiving.
+
+The default version is `1.0.0-beta1`; architecture follows the build interpreter. Rebuilding the same version replaces that platform/architecture's release folder and archive after packaged assets pass verification. Build and dist directories are shared, so run builds sequentially.
+
+CachyOS builds require Python, `tar`, and system libraries needed by Qt for your desktop session. Use a virtual environment for Python dependencies. PyInstaller does not bundle glibc: a build made on rolling-release CachyOS may not run on distributions with older system libraries. Build on the oldest Linux environment you intend to support for broader distribution.
+
+These are local beta packages without installers or Developer ID signing/notarization. macOS distribution outside your machine may require a separate signing and notarization workflow.
+
+After building, extract the archive into a separate directory and launch the packaged app. Check window and tray icons, light/dark themes, PDF previews, and ordinary startup/exit. Linux tray support depends on the desktop session. macOS bundles must be built and smoke-tested on a Mac; a Linux build cannot validate them.
 
 ## Platform Notes
 
